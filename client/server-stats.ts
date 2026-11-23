@@ -1,5 +1,6 @@
 import { isServerStats, type ServerStats } from '../shared/protocol.ts';
 import { onLanguageChange, t } from './i18n.ts';
+import { appUrl } from './core/paths.ts';
 
 export function mountServerStats(root: HTMLElement) {
   const panel = root.querySelector<HTMLElement>('.server-stats')!;
@@ -67,7 +68,7 @@ export function mountServerStats(root: HTMLElement) {
     const current = new AbortController();
     request = current;
     try {
-      const response = await fetch('/api/stats', {
+      const response = await fetch(appUrl('/api/stats'), {
         cache: 'no-store',
         signal: AbortSignal.any([current.signal, AbortSignal.timeout(5000)]),
       });

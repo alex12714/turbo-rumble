@@ -38,17 +38,22 @@ Smoke i playtest tworzą własne pokoje. Playtest prowadzi ośmiu klientów prze
 5. Ustaw poniższe zmienne jako runtime environment. Żadna nie jest sekretem kompilacji. Hasła i dane Coolify nie należą do obrazu ani repozytorium.
 6. Ustaw jedną replikę i co najmniej 20 sekund czasu na zatrzymanie. Deployment uruchamiaj między meczami. Wyłącz nakładanie się starych i nowych instancji dla tego zasobu, jeżeli włączono rolling updates. Obie nie mogą obsługiwać tych samych pamięciowych pokoi.
 
-| Zmienna            | Wartość                                                          |
-| ------------------ | ---------------------------------------------------------------- |
-| `NODE_ENV`         | `production` (domyślnie w obrazie)                               |
-| `HOST`             | `0.0.0.0` (domyślnie)                                            |
-| `PORT`             | `4317` (zgodne z portem w Coolify)                               |
-| `DATA_DIR`         | `/app/data` (zgodne z mountem)                                   |
-| `PUBLIC_URL`       | np. `https://race.example.com`, zastąp prawdziwą domeną          |
-| `TRUST_PROXY_HOPS` | `1` dla dokładnie jednego zaufanego proxy Traefik; `0` bez proxy |
-| `MAX_ROOMS`        | `50` domyślnie; limit ochronny, nie wynik benchmarku             |
+| Zmienna            | Wartość                                                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`         | `production` (domyślnie w obrazie)                                                                                          |
+| `HOST`             | `0.0.0.0` (domyślnie)                                                                                                       |
+| `PORT`             | `4317` (zgodne z portem w Coolify)                                                                                          |
+| `DATA_DIR`         | `/app/data` (zgodne z mountem)                                                                                              |
+| `PUBLIC_URL`       | np. `https://race.example.com`, zastąp prawdziwą domeną                                                                     |
+| `TRUST_PROXY_HOPS` | `1` dla dokładnie jednego zaufanego proxy Traefik; `0` bez proxy                                                            |
+| `MAX_ROOMS`        | `50` domyślnie; limit ochronny, nie wynik benchmarku                                                                        |
+| `EMBED_ORIGINS`    | opcjonalnie: originy, które mogą osadzać grę w iframe (CSP `frame-ancestors`) i odbierać `rumble:status`; puste = bez zmian |
 
 Jeśli przed Traefikiem stoi dodatkowy CDN/proxy, ustal rzeczywisty łańcuch i jego filtrowanie nagłówków. Nie ustawiaj automatycznie `trust proxy=true`; limit prób tworzenia i dołączania jest oparty o IP klienta. Aplikacja nie powinna być publicznie dostępna z pominięciem zaufanego proxy przy włączonym zaufaniu do forwarded headers.
+
+### Gra pod ścieżką (`BASE_PATH`)
+
+Aby serwować grę pod prefiksem, np. `https://example.com/g/rumble`, ustaw `BASE_PATH=/g/rumble` jako **argument budowania** (Vite wpisuje go do bundla); obraz przekazuje tę samą wartość serwerowi w runtime. API, Socket.IO (`/g/rumble/socket.io/`), zasoby, health (`/g/rumble/api/health`) i linki/QR działają wtedy pod prefiksem. Puste (domyślnie) = gra w katalogu głównym, jak dotąd. Serwer ostrzega w logu, gdy `dist/` zbudowano dla innej wartości. Smoke/playtest: `GAME_URL=https://example.com/g/rumble`.
 
 ## Cloudflare Tunnel w produkcji
 

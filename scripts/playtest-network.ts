@@ -44,7 +44,10 @@ import { resolve, dirname } from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { getTrack } from '../shared/track.ts';
 import { MAPS, type MapId } from '../shared/maps.ts';
-const base = process.env.GAME_URL || 'http://localhost:4317';
+const base = (process.env.GAME_URL || 'http://localhost:4317').replace(/\/+$/, '');
+// GAME_URL may include a base path (e.g. http://host/g/rumble); Socket.IO then lives below it.
+const socketUrl = new URL(base);
+const socketPath = socketUrl.pathname.replace(/\/+$/, '') + '/socket.io';
 const joinedCode = process.env.ROOM_CODE;
 const out = process.env.QA_REPORT || resolve('data', 'playtest-report.json');
 mkdirSync(dirname(out), { recursive: true });
@@ -82,7 +85,13 @@ async function post<T = Session>(path: string, body: unknown, expected = 201): P
   return data as T;
 }
 async function connect(auth: Session) {
-  const s: GameSocket = io(base, { auth, reconnection: false, autoConnect: false, timeout: 4000 });
+  const s: GameSocket = io(socketUrl.origin, {
+    path: socketPath,
+    auth,
+    reconnection: false,
+    autoConnect: false,
+    timeout: 4000,
+  });
   sockets.push(s);
   await new Promise<void>((resolve, reject) => {
     s.once('connect', resolve);
@@ -250,7 +259,8 @@ try {
     check('ninth player rejected', String(full.error).includes('8'));
     check('controller cannot execute host start', !(await cmd(drivers[1].s, 'start')).ok);
     check('unknown owner command rejected', !(await cmd(host, 'unknown')).ok);
-    const bad = io(base, {
+    const bad = io(socketUrl.origin, {
+      path: socketPath,
       auth: { ...session, token: 'invalid-token' },
       reconnection: false,
       autoConnect: false,

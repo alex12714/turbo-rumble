@@ -9,8 +9,9 @@ import { home } from './pages/home.ts';
 import { joinPage } from './pages/join.ts';
 import { roomPage } from './pages/room.ts';
 import { hostPage } from './pages/host.ts';
+import { appRoute } from './core/paths.ts';
 
-const route = location.pathname;
+const route = appRoute();
 if (import.meta.env.DEV && route === '/map-check')
   void import('./map-check.ts').then((m) => m.mountMapCheck(app));
 else if (import.meta.env.DEV && route === '/equipment-check')

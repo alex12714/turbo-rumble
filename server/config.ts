@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { parseBasePath, parseEmbedOrigins } from '../shared/base-path.ts';
 
 export interface ServerConfig {
   port: number;
@@ -7,6 +8,10 @@ export interface ServerConfig {
   rootDir: string;
   dataDir: string;
   publicUrl?: string;
+  /** URL prefix such as `/g/rumble`; '' serves from the root. Must match the Vite build. */
+  basePath: string;
+  /** Origins allowed to frame the game and receive its status messages; empty = unrestricted. */
+  embedOrigins: string[];
   trustProxyHops: number;
   maxRooms: number;
   roomTtlMs: number;
@@ -47,6 +52,8 @@ export function loadConfig(
     rootDir,
     dataDir: resolve(env.DATA_DIR || resolve(rootDir, 'data')),
     publicUrl,
+    basePath: parseBasePath(env.BASE_PATH),
+    embedOrigins: parseEmbedOrigins(env.EMBED_ORIGINS),
     trustProxyHops: integer(env, 'TRUST_PROXY_HOPS', 0, 0, 5),
     maxRooms: integer(env, 'MAX_ROOMS', 50, 1, 500),
     roomTtlMs: 3 * 60_000,

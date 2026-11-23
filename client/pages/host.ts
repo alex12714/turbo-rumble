@@ -19,9 +19,11 @@ import { MAPS, DEFAULT_SETTINGS } from '../../shared/maps.ts';
 import QRCode from 'qrcode';
 import { roomLinks } from '../core/room-links.ts';
 import { app, $, header, toast } from '../core/dom.ts';
-import { api, safeSession } from '../core/api.ts';
+import { appUrl } from '../core/paths.ts';
+import { api, safeSession, storeItem } from '../core/api.ts';
 import { connectGame, createInput, type GameSocket } from '../core/network.ts';
 import { getScene } from '../core/scene.ts';
+import { embedded, embedStatusReporter } from '../embed.ts';
 import { Sound } from '../audio.ts';
 import type { GameScene } from '../scene.ts';
 import { type Session, type ConnectionSession, type Snapshot } from '../../shared/types.ts';
@@ -62,7 +64,7 @@ async function returnToLobby() {
 export async function hostPage(code: string, watch = false) {
   code = code.toUpperCase();
   if (!/^[A-Z2-9]{6}$/.test(code)) {
-    location.replace('/join');
+    location.replace(appUrl('/join'));
     return;
   }
   spectator = watch;
@@ -74,13 +76,13 @@ export async function hostPage(code: string, watch = false) {
       ? { code, token: fragment.get('key')!, role: 'host' }
       : stored;
   if (!session) {
-    location.replace('/room/' + code);
+    location.replace(appUrl('/room/' + code));
     return;
   }
-  if (!watch) localStorage.setItem('turbo:host:' + code, JSON.stringify(session));
+  if (!watch) storeItem('turbo:host:' + code, JSON.stringify(session));
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
-  document.body.className = 'host-page';
-  app.innerHTML = /* HTML */ `${header(`<div class="host-track"><span class="live-dot"></span> <span id="host-map-name">SUNDOWN CIRCUIT XL</span> <b id="host-map-index">01</b></div><div class="host-actions"><span id="host-admin"></span><a class="button subtle room-share" id="share-room" href="/room/${code}" target="_blank" rel="noopener">${watch ? 'Dołącz jako kontroler' : 'Udostępnij pokój'}</a><span id="host-connection" class="connection">Łączenie…</span><button class="icon-button" id="sound-toggle" aria-label="Włącz dźwięk">♪</button><button class="icon-button screen-awake-button" id="screen-awake" type="button"></button><button class="icon-button" id="fullscreen" aria-label="Pełny ekran">⛶</button></div>`)}
+  document.body.className = embedded ? 'host-page embedded' : 'host-page';
+  app.innerHTML = /* HTML */ `${header(`<div class="host-track"><span class="live-dot"></span> <span id="host-map-name">SUNDOWN CIRCUIT XL</span> <b id="host-map-index">01</b></div><div class="host-actions"><span id="host-admin"></span><a class="button subtle room-share" id="share-room" href="${appUrl(`/room/${code}`)}" target="_blank" rel="noopener">${watch ? 'Dołącz jako kontroler' : 'Udostępnij pokój'}</a><span id="host-connection" class="connection">Łączenie…</span><button class="icon-button" id="sound-toggle" aria-label="Włącz dźwięk">♪</button><button class="icon-button screen-awake-button" id="screen-awake" type="button"></button><button class="icon-button" id="fullscreen" aria-label="Pełny ekran">⛶</button></div>`)}
     <main class="arena">
       <div class="game-viewport">
         <div id="game-world"></div>
@@ -107,7 +109,7 @@ export async function hostPage(code: string, watch = false) {
               <small>KOD POKOJU</small><strong>${code}</strong
               ><a
                 id="join-link"
-                href="/join?code=${code}&mode=controller"
+                href="${appUrl(`/join?code=${code}&mode=controller`)}"
                 target="_blank"
                 rel="noopener"
                 >Otwórz pad ↗</a
@@ -149,7 +151,8 @@ export async function hostPage(code: string, watch = false) {
       </div>
     </main>`;
   mountLanguageSwitch(app);
-  mountScreenAwake($<HTMLButtonElement>('#screen-awake'));
+  // An embedding page owns the screen; wake lock needs its permission policy, so skip it there.
+  if (!embedded) mountScreenAwake($<HTMLButtonElement>('#screen-awake'));
   $('#results').addEventListener('cancel', (event) => {
     event.preventDefault();
     if (!spectator) void returnToLobby();
@@ -163,6 +166,8 @@ export async function hostPage(code: string, watch = false) {
   };
   $('#start-race').onclick = () => void hostCommand('start').catch((e) => toast(e.message));
   const audioControls = mountAudioControls(sound, $('#sound-toggle'));
+  // Inside an iframe without allow="fullscreen" the button cannot work.
+  $('#fullscreen').hidden = !document.fullscreenEnabled;
   $('#fullscreen').onclick = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else
@@ -183,6 +188,7 @@ export async function hostPage(code: string, watch = false) {
     margin: 1,
     color: { dark: '#19293a', light: '#fffaf0' },
   });
+  const reportStatus = embedStatusReporter(links.embedOrigins, url);
   const socket = connectGame(session);
   hostSocket = socket;
   if (!watch) {
@@ -196,7 +202,7 @@ export async function hostPage(code: string, watch = false) {
   });
   socket.on('disconnect', (reason) => {
     if (spectator && reason === 'io server disconnect') {
-      location.replace('/room/' + code);
+      location.replace(appUrl('/room/' + code));
       return;
     }
     if (current) sound.update({ ...current, phase: 'paused' }, keyboardId);
@@ -205,13 +211,14 @@ export async function hostPage(code: string, watch = false) {
     toast('Utracono połączenie. Próbuję połączyć ponownie.');
   });
   socket.on('connect_error', (e) => {
-    if (spectator) location.replace('/room/' + code);
+    if (spectator) location.replace(appUrl('/room/' + code));
     else toast(e.message);
   });
   socket.on('state', (state: Snapshot) => {
     current = state;
     scene?.setState(state);
     renderHost(state);
+    reportStatus(state);
   });
   try {
     const s = (scene = await getScene($('#game-world')));
@@ -242,7 +249,7 @@ export async function hostPage(code: string, watch = false) {
     }
   } else if (!watch && safeSession('turbo:keyboard:' + code))
     void joinKeyboard(code).catch(() => {
-      localStorage.removeItem('turbo:keyboard:' + code);
+      storeItem('turbo:keyboard:' + code, null);
     });
 }
 let scoreRoom = '',
@@ -488,7 +495,7 @@ function renderHost(state: Snapshot | null) {
         <p id="results-feedback" role="alert" hidden></p>
         <div class="result-actions">
           <button class="button primary" id="rematch">Rewanż ↗</button>
-          <a class="button subtle" href="/">Menu główne</a>
+          <a class="button subtle" href="${appUrl('/')}">Menu główne</a>
         </div>`;
       disposeResultsText?.();
       disposeResultsText = bindTranslations(results);
@@ -509,7 +516,7 @@ async function joinKeyboard(code: string) {
   const session =
     safeSession('turbo:keyboard:' + code) ??
     (await api<Session>('/api/join', { code, name: t('Ty · klawiatura') }));
-  localStorage.setItem('turbo:keyboard:' + code, JSON.stringify(session));
+  storeItem('turbo:keyboard:' + code, JSON.stringify(session));
   const socket = connectGame(session);
   const input = createInput(socket);
   await new Promise<void>((resolve, reject) => {
@@ -552,7 +559,7 @@ async function joinKeyboard(code: string) {
     if (reason === 'io server disconnect') {
       keyboardId = null;
       keyboardController = null;
-      localStorage.removeItem('turbo:keyboard:' + code);
+      storeItem('turbo:keyboard:' + code, null);
       input.dispose();
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('keyup', keyup);

@@ -21,6 +21,7 @@ export async function createGameServer(config: ServerConfig) {
     maxHttpBufferSize: 8192,
     pingInterval: 5000,
     pingTimeout: 10_000,
+    path: config.basePath + '/socket.io',
   });
   const results = new ResultsStore(config.dataDir),
     registry = new RoomRegistry(config.maxRooms, config.playerReconnectMs),
@@ -28,8 +29,18 @@ export async function createGameServer(config: ServerConfig) {
   let closing = false,
     closePromise: Promise<void> | undefined;
   let closeFrontend: (() => Promise<void>) | undefined;
+  // Every route lives on `site`, mounted at BASE_PATH ('' = origin root), so paths below stay relative to it.
+  const site = express.Router();
   app.disable('x-powered-by');
-  app.use((req, res, next) => {
+  if (config.embedOrigins.length)
+    app.use((_req, res, next) => {
+      res.setHeader(
+        'Content-Security-Policy',
+        `frame-ancestors 'self' ${config.embedOrigins.join(' ')}`,
+      );
+      next();
+    });
+  site.use((req, res, next) => {
     if (
       req.path.startsWith('/api/') ||
       req.path.startsWith('/host/') ||
@@ -53,12 +64,20 @@ export async function createGameServer(config: ServerConfig) {
   recordActivity();
   const activityTimer = setInterval(recordActivity, 1000);
   const broadcast = registerRealtime(io, registry, recordActivity);
-  registerHttp(app, config, registry, results, limiter, broadcast, () => closing);
+  registerHttp(site, config, registry, results, limiter, broadcast, () => closing);
   if (config.production) {
     const frontend = resolve(config.rootDir, 'dist');
     let indexHtml: Promise<string> | undefined;
-    app.use(express.static(frontend, { index: false }));
-    app.get('/{*path}', async (req, res, next) => {
+    // Vite bakes BASE_PATH into the bundle; a build made for another prefix cannot load its assets.
+    const builtBase = /src="([^"]*)\/assets\//.exec(
+      await readFile(resolve(frontend, 'index.html'), 'utf8').catch(() => ''),
+    )?.[1];
+    if (builtBase !== undefined && builtBase !== config.basePath)
+      console.warn(
+        `dist/ was built for BASE_PATH="${builtBase}" but the server runs with "${config.basePath}"; rebuild with the same value`,
+      );
+    site.use(express.static(frontend, { index: false }));
+    site.get('/{*path}', async (req, res, next) => {
       try {
         indexHtml ??= readFile(resolve(frontend, 'index.html'), 'utf8');
         const meta = pageMetadata(req.path);
@@ -66,7 +85,7 @@ export async function createGameServer(config: ServerConfig) {
         res
           .status(meta.page === 'missing' ? 404 : 200)
           .type('html')
-          .send(renderPageHtml(await indexHtml, req.path, config.publicUrl));
+          .send(renderPageHtml(await indexHtml, req.path, config.publicUrl, config.basePath));
       } catch (error) {
         next(error);
       }
@@ -78,9 +97,11 @@ export async function createGameServer(config: ServerConfig) {
       server: { middlewareMode: true, hmr: { server: http } },
       appType: 'spa',
     });
+    app.use(config.basePath || '/', site);
     app.use(vite.middlewares);
     closeFrontend = () => vite.close();
   }
+  if (config.production) app.use(config.basePath || '/', site);
   const runtime = startRuntime(config, registry, io, results, limiter, broadcast);
   return {
     app,

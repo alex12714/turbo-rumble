@@ -13,13 +13,15 @@ import { roomSettings } from '../room-settings.ts';
 import { controllerLobbyMode, waitingForSummary } from '../race-presentation.ts';
 import '../controller-lobby.css';
 import { app, $, logo, toast } from '../core/dom.ts';
+import { appUrl } from '../core/paths.ts';
+import { storeItem } from '../core/api.ts';
 import { connectGame, createInput } from '../core/network.ts';
 import { type Session, type Snapshot } from '../../shared/types.ts';
 export function controller(session: Session) {
   document.body.className = 'controller-page';
   app.innerHTML = /* HTML */ `<div class="pad-shell">
     <header class="pad-header">
-      <a class="brand small" href="/">${logo}</a
+      <a class="brand small" href="${appUrl('/')}">${logo}</a
       ><span class="pad-room">POKÓJ <b>${session.code}</b></span
       ><span id="pad-connection" class="connection">Łączenie…</span>
       <button class="icon-button screen-awake-button" id="screen-awake" type="button"></button>
@@ -154,10 +156,10 @@ export function controller(session: Session) {
     }
   };
   $('#pad-rejoin').onclick = () => {
-    localStorage.removeItem('turbo:player:' + session.code);
+    storeItem('turbo:player:' + session.code, null);
     input.dispose();
     socket.disconnect();
-    location.href = '/join';
+    location.href = appUrl('/join');
   };
   socket.on('connect', () => {
     $('#pad-connection').textContent = t('Połączono');

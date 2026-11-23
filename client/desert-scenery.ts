@@ -10,6 +10,7 @@ import {
 } from '../shared/desert-layout.ts';
 import type { Track } from '../shared/track.ts';
 import { disposeResources } from './resources.ts';
+import { appUrl } from './core/paths.ts';
 
 const material = (color: string) =>
   new T.MeshStandardMaterial({ color, roughness: 1, flatShading: true });
@@ -512,7 +513,7 @@ export async function addDesertAssets(
   await Promise.all(
     [...new Set(objects.map((o) => o.asset))].map(async (asset) => {
       try {
-        const gltf = await loader.loadAsync(`/assets/desert/${asset}.glb`);
+        const gltf = await loader.loadAsync(appUrl(`/assets/desert/${asset}.glb`));
         if (!isCurrent()) {
           disposeResources([gltf.scene]);
           return;

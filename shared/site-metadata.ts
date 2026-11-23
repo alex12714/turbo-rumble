@@ -64,7 +64,12 @@ const copy = {
   },
 } as const;
 
-export function pageMetadata(pathname: string, language: SiteLanguage = 'en', origin = SITE_URL) {
+export function pageMetadata(
+  pathname: string,
+  language: SiteLanguage = 'en',
+  origin = SITE_URL,
+  basePath = '',
+) {
   const path = pathname.replace(/\/+$/, '') || '/';
   const page =
     path === '/'
@@ -87,8 +92,8 @@ export function pageMetadata(pathname: string, language: SiteLanguage = 'en', or
     page,
     indexable,
     robots: indexable ? 'index, follow, max-image-preview:large' : 'noindex, nofollow',
-    canonical: new URL(indexable ? path : '/', origin).href,
-    image: new URL(SOCIAL_IMAGE_PATH, origin).href,
+    canonical: new URL(basePath + (indexable ? path : '/'), origin).href,
+    image: new URL(basePath + SOCIAL_IMAGE_PATH, origin).href,
     imageAlt: copy[language].imageAlt,
     locale: language === 'pl' ? 'pl_PL' : 'en_US',
   };
@@ -111,8 +116,8 @@ function staticContent(page: ReturnType<typeof pageMetadata>['page']) {
   return '<main class="html-fallback"><h1>Page not found</h1><a href="/">Play Turbo Rumble</a></main>';
 }
 
-export function renderPageHtml(html: string, pathname = '/', origin = SITE_URL) {
-  const meta = pageMetadata(pathname, 'en', origin);
+export function renderPageHtml(html: string, pathname = '/', origin = SITE_URL, basePath = '') {
+  const meta = pageMetadata(pathname, 'en', origin, basePath);
   const tag = (attribute: 'name' | 'property', key: string, content: string) =>
     `<meta ${attribute}="${key}" content="${escape(content)}" />`;
   const tags = [
@@ -179,6 +184,6 @@ export function renderPageHtml(html: string, pathname = '/', origin = SITE_URL) 
     )
     .replace(
       /<!-- static-content:start -->[\s\S]*?<!-- static-content:end -->/,
-      `<!-- static-content:start -->${staticContent(meta.page)}<!-- static-content:end -->`,
+      `<!-- static-content:start -->${staticContent(meta.page).replace(/href="\//g, `href="${basePath}/`)}<!-- static-content:end -->`,
     );
 }

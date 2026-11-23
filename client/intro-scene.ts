@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { disposeResources } from './resources.ts';
 import { introPose } from './intro-motion.ts';
+import { appUrl } from './core/paths.ts';
 
 interface Actor {
   group: T.Group;
@@ -132,7 +133,7 @@ export class IntroScene {
     const vehicles = await Promise.all(
       ['race', 'hatchback-sports', 'race-future'].map(async (name) => {
         try {
-          const gltf = await loader.loadAsync(`/assets/cars/${name}.glb`);
+          const gltf = await loader.loadAsync(appUrl(`/assets/cars/${name}.glb`));
           return gltf.scene;
         } catch {
           const fallback = new T.Group();

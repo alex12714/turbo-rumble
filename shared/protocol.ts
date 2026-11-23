@@ -25,6 +25,8 @@ export interface NetworkInfo {
   localUrl: string;
   networkUrls: string[];
   publicUrl: string | null;
+  /** Parent origins that may embed the game (EMBED_ORIGINS); embed status messages go only there. */
+  embedOrigins?: string[];
 }
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

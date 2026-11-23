@@ -1,6 +1,9 @@
 services:
   game:
-    build: .
+    build:
+      context: .
+      args:
+        BASE_PATH: '${BASE_PATH:-}'
     image: turbo-rumble:local
     init: true
     restart: unless-stopped
@@ -13,6 +16,7 @@ services:
       PUBLIC_URL: '${PUBLIC_URL:-}'
       TRUST_PROXY_HOPS: '${TRUST_PROXY_HOPS:-0}'
       MAX_ROOMS: '${MAX_ROOMS:-50}'
+      EMBED_ORIGINS: '${EMBED_ORIGINS:-}'
     volumes:
       - game-data:/app/data
     stop_grace_period: 20s

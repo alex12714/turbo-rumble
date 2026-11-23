@@ -3,15 +3,21 @@ import { mountServerStats } from '../server-stats.ts';
 import { mountCinematicBackground } from '../cinematic-background.ts';
 import { mountLanguageSwitch } from '../i18n.ts';
 import { app, $, header, toast } from '../core/dom.ts';
-import { api } from '../core/api.ts';
+import { appUrl } from '../core/paths.ts';
+import { api, storeItem } from '../core/api.ts';
+import { embedQuery } from '../embed.ts';
 import { type Session } from '../../shared/types.ts';
 async function createGame() {
   const button = $<HTMLButtonElement>('#create-room');
   button.disabled = true;
   try {
     const session = await api<Session>('/api/rooms', {});
-    localStorage.setItem('turbo:host:' + session.code, JSON.stringify(session));
-    location.href = `/host/${session.code}`;
+    const stored = storeItem('turbo:host:' + session.code, JSON.stringify(session));
+    // Without storage (blocked in some iframes) hand the host key over in the fragment instead.
+    location.href =
+      appUrl(`/host/${session.code}`) +
+      embedQuery() +
+      (stored ? '' : '#key=' + encodeURIComponent(session.token));
   } catch (e) {
     toast((e as Error).message);
     button.disabled = false;
@@ -22,7 +28,7 @@ export async function home() {
   app.innerHTML = /* HTML */ ` <div class="cinema-backdrop" aria-hidden="true">
       <img
         class="cinema-image is-active"
-        src="/assets/cinematics/desert.webp"
+        src="${appUrl('/assets/cinematics/desert.webp')}"
         alt=""
         fetchpriority="high"
         decoding="async"
@@ -119,7 +125,7 @@ export async function home() {
         <span class="visually-hidden" role="status" data-stat-status></span>
       </div>
       <nav aria-label="Informacje o grze">
-        <a href="/author">Autor</a><a href="/credits">Zasoby i licencje</a
+        <a href="${appUrl('/author')}">Autor</a><a href="${appUrl('/credits')}">Zasoby i licencje</a
         ><a class="repo-link" href="https://github.com/dziksu/turbo-rumble">Kod źródłowy ↗</a>
         <a
           class="game-version"
@@ -164,11 +170,14 @@ export async function home() {
   $('#create-room').onclick = () => void createGame();
   $('#join-form').onsubmit = (e) => {
     e.preventDefault();
-    location.href =
-      '/join?code=' + encodeURIComponent($<HTMLInputElement>('#room-code').value.toUpperCase());
+    location.href = appUrl(
+      '/join?code=' + encodeURIComponent($<HTMLInputElement>('#room-code').value.toUpperCase()),
+    );
   };
   $('#open-rules').onclick = () => $<HTMLDialogElement>('#rules').showModal();
   $('.dialog-close').onclick = () => $<HTMLDialogElement>('#rules').close();
   mountCinematicBackground(app);
   mountServerStats(app);
+  // `?create=1` (used by embedding pages) opens a fresh room straight away.
+  if (new URLSearchParams(location.search).get('create') === '1') void createGame();
 }

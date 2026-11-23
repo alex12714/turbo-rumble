@@ -5,6 +5,7 @@ import type { HostCommand } from '../shared/protocol.ts';
 import type { GameSocket } from './core/network.ts';
 import { controllerLobbyMode } from './race-presentation.ts';
 import { toast } from './core/dom.ts';
+import { appUrl } from './core/paths.ts';
 
 type SettingsIdentity = { host: true } | { playerId: string };
 
@@ -23,7 +24,7 @@ export function roomSettings(
           .map(
             ([id, map], index) => `
           <button type="button" class="map-option" data-map="${id}" aria-pressed="false">
-            <span class="map-image"><img src="/assets/maps/${id}.png" alt="" width="800" height="450" decoding="async" /><span class="map-number">0${index + 1}</span><span class="map-selected-check" aria-hidden="true">✓</span></span>
+            <span class="map-image"><img src="${appUrl(`/assets/maps/${id}.png`)}" alt="" width="800" height="450" decoding="async" /><span class="map-number">0${index + 1}</span><span class="map-selected-check" aria-hidden="true">✓</span></span>
             <span class="map-caption"><b>${map.name}</b><span>${map.subtitle}</span></span>
           </button>`,
           )

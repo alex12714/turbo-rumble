@@ -1,7 +1,7 @@
 import { translateMessage, onLanguageChange } from '../i18n.ts';
+import { appUrl } from './paths.ts';
 export const app = document.querySelector<HTMLDivElement>('#app')!;
-export const logo =
-  '<span class="brand-mark">ϟ</span><img class="brand-wordmark" src="/brand-wordmark.svg" width="76" height="35" alt="Turbo Rumble" />';
+export const logo = `<span class="brand-mark">ϟ</span><img class="brand-wordmark" src="${appUrl('/brand-wordmark.svg')}" width="76" height="35" alt="Turbo Rumble" />`;
 export const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!;
 export function toast(message: string) {
   let el = document.querySelector('#toast');
@@ -17,7 +17,7 @@ export function toast(message: string) {
   setTimeout(() => el?.classList.remove('visible'), 5000);
 }
 export function header(extra = '') {
-  return `<header class="topbar"><a class="brand" href="/" aria-label="Turbo Rumble — strona główna">${logo}</a>${extra}</header>`;
+  return `<header class="topbar"><a class="brand" href="${appUrl('/')}" aria-label="Turbo Rumble — strona główna">${logo}</a>${extra}</header>`;
 }
 
 onLanguageChange(() => {

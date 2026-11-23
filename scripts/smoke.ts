@@ -8,7 +8,10 @@ import type {
 } from '../shared/protocol.ts';
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-const base = process.env.GAME_URL ?? 'http://localhost:4317';
+const base = (process.env.GAME_URL ?? 'http://localhost:4317').replace(/\/+$/, '');
+// GAME_URL may include a base path (e.g. http://host/g/rumble); Socket.IO then lives below it.
+const socketUrl = new URL(base);
+const socketPath = socketUrl.pathname.replace(/\/+$/, '') + '/socket.io';
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const sockets: GameSocket[] = [],
   timers: ReturnType<typeof setInterval>[] = [];
@@ -23,7 +26,12 @@ async function post(path: string, body: unknown) {
   return data as Session;
 }
 async function connect(auth: Session) {
-  const s: GameSocket = io(base, { auth, autoConnect: false, reconnection: false });
+  const s: GameSocket = io(socketUrl.origin, {
+    path: socketPath,
+    auth,
+    autoConnect: false,
+    reconnection: false,
+  });
   sockets.push(s);
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Socket connection timeout')), 4000);
@@ -120,7 +128,8 @@ try {
   await stateWhere((s) => s.cars.some((c) => c.id === oldId && c.connected));
   assert.equal(latest!.cars.length, 8, 'reconnect does not create a new slot');
   assert.equal(players[0].connected, false, 'old controller is disconnected on session takeover');
-  const bad = io(base, {
+  const bad = io(socketUrl.origin, {
+    path: socketPath,
     auth: { ...session, token: 'invalid-token' },
     reconnection: false,
     autoConnect: false,

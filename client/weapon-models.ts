@@ -2,6 +2,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { Weapon, CarState, ProjectileState } from '../shared/types.ts';
 import { disposeResources } from './resources.ts';
+import { appUrl } from './core/paths.ts';
 
 const material = (color: T.ColorRepresentation) =>
   new T.MeshStandardMaterial({
@@ -64,7 +65,7 @@ export class WeaponModels {
     const loaded = await Promise.all(
       files.map(async (name) => {
         try {
-          return (await loader.loadAsync(`/assets/weapons/${name}.glb`)).scene;
+          return (await loader.loadAsync(appUrl(`/assets/weapons/${name}.glb`))).scene;
         } catch {
           return undefined;
         } // Procedural equivalents preserve item readability offline.

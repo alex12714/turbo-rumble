@@ -1,6 +1,6 @@
 import { GAME_VERSION } from '../shared/version.ts';
 import { isActivityRange } from '../shared/activity.ts';
-import type { Express, ErrorRequestHandler } from 'express';
+import type { Router, ErrorRequestHandler } from 'express';
 import { networkInterfaces } from 'node:os';
 import { isRecord, type NetworkInfo } from '../shared/protocol.ts';
 import type { ServerConfig } from './config.ts';
@@ -17,11 +17,12 @@ export function networkInfo(config: ServerConfig): NetworkInfo {
     localUrl: `http://localhost:${config.port}`,
     networkUrls,
     publicUrl: config.publicUrl ?? null,
+    embedOrigins: config.embedOrigins,
   };
 }
 
 export function registerHttp(
-  app: Express,
+  app: Router,
   config: ServerConfig,
   registry: RoomRegistry,
   results: ResultsStore,

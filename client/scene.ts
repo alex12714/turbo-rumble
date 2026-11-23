@@ -24,6 +24,7 @@ import type { MapId } from '../shared/maps.ts';
 import { addBiome, PALETTES } from './biomes.ts';
 import { ImpactShake, RoadEffects } from './race-effects.ts';
 import { SceneLighting } from './scene-lighting.ts';
+import { appUrl } from './core/paths.ts';
 
 const mat = (color: T.ColorRepresentation, roughness = 0.8) =>
   new T.MeshStandardMaterial({ color, roughness });
@@ -356,7 +357,7 @@ export class GameScene {
     const loaded = await Promise.all(
       carNames.map(async (name) => {
         try {
-          const gltf = await loader.loadAsync(`/assets/cars/${name}.glb`);
+          const gltf = await loader.loadAsync(appUrl(`/assets/cars/${name}.glb`));
           return gltf.scene;
         } catch {
           this.onAssetError('Część modeli nie została załadowana. Używam pojazdów zastępczych.');

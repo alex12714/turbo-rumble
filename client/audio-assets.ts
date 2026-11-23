@@ -9,6 +9,7 @@ export const AUDIO_FILES = {
   pulse: ['pulse.wav'],
   music: ['pixel-sprinter.ogg', 'pixel-sprinter.mp3'],
 } as const;
+import { appUrl } from './core/paths.ts';
 export type AudioAsset = keyof typeof AUDIO_FILES;
 export type AudioSamples = Partial<Record<AudioAsset, AudioBuffer>>;
 
@@ -19,7 +20,7 @@ export async function loadAudioSamples(context: BaseAudioContext, signal?: Abort
     (Object.keys(AUDIO_FILES) as AudioAsset[]).map(async (key) => {
       for (const file of AUDIO_FILES[key]) {
         try {
-          const response = await fetch(`/assets/audio/${file}`, { signal });
+          const response = await fetch(appUrl(`/assets/audio/${file}`), { signal });
           if (!response.ok) continue;
           samples[key] = await context.decodeAudioData(await response.arrayBuffer());
           return;

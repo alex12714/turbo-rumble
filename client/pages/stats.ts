@@ -7,6 +7,7 @@ import {
   type ActivityRange,
 } from '../../shared/activity.ts';
 import '../stats.css';
+import { appUrl } from '../core/paths.ts';
 
 function timeFormatters() {
   const options: Intl.DateTimeFormatOptions = {
@@ -196,7 +197,7 @@ export function statsPage() {
     const current = new AbortController();
     request = current;
     try {
-      const response = await fetch(`/api/stats/history?range=${range}`, {
+      const response = await fetch(appUrl(`/api/stats/history?range=${range}`), {
         cache: 'no-store',
         signal: AbortSignal.any([current.signal, AbortSignal.timeout(5000)]),
       });

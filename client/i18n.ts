@@ -10,6 +10,7 @@ import {
 import type { Snapshot, Weapon } from '../shared/types.ts';
 import { WEAPONS } from '../shared/types.ts';
 import { pageMetadata } from '../shared/site-metadata.ts';
+import { appRoute } from './core/paths.ts';
 
 const STORAGE_KEY = 'turbo:language';
 let language: Language = 'en';
@@ -30,7 +31,7 @@ export function onLanguageChange(listener: () => void) {
   };
 }
 function updateDocument() {
-  const meta = pageMetadata(location.pathname, language);
+  const meta = pageMetadata(appRoute(), language);
   document.documentElement.lang = language;
   document.title = meta.title;
   for (const [selector, content] of [

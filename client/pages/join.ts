@@ -1,6 +1,6 @@
 import { mountLanguageSwitch, onLanguageChange, translateMessage } from '../i18n.ts';
 import { app, $, header } from '../core/dom.ts';
-import { api, safeSession } from '../core/api.ts';
+import { api, safeSession, storeItem } from '../core/api.ts';
 import { roomPage } from './room.ts';
 import { controller } from './controller.ts';
 import type { Session } from '../../shared/types.ts';
@@ -59,7 +59,16 @@ export async function joinPage() {
     if (error) error.textContent = translateMessage(lastError);
   });
   $<HTMLInputElement>('#join-code').value = code;
-  $<HTMLInputElement>('#nickname').value = localStorage.getItem('turbo:name') ?? '';
+  let savedName = '';
+  try {
+    savedName = localStorage.getItem('turbo:name') ?? '';
+  } catch {
+    /* Storage is optional. */
+  }
+  // `?name=` lets an embedding page prefill the participant's display name.
+  $<HTMLInputElement>('#nickname').value = (
+    new URLSearchParams(location.search).get('name') ?? savedName
+  ).slice(0, 18);
   $('#player-form').onsubmit = async (e) => {
     e.preventDefault();
     const button = $<HTMLButtonElement>('#player-form button');
@@ -72,8 +81,8 @@ export async function joinPage() {
           code: $<HTMLInputElement>('#join-code').value,
           name,
         });
-      localStorage.setItem('turbo:name', name);
-      localStorage.setItem('turbo:player:' + session.code, JSON.stringify(session));
+      storeItem('turbo:name', name);
+      storeItem('turbo:player:' + session.code, JSON.stringify(session));
       stopErrorLanguage();
       controller(session);
     } catch (error) {

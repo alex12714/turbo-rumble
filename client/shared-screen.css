@@ -900,3 +900,13 @@
     line-height: 1.3;
   }
 }
+
+/* ?embed=1: inside another page's iframe (e.g. a call stage) drop chrome that does not apply there. */
+.host-page.embedded .topbar {
+  padding: 0 12px;
+  gap: 12px;
+}
+.host-page.embedded .brand-wordmark,
+.host-page.embedded #screen-awake {
+  display: none;
+}

@@ -1,9 +1,10 @@
 import { onLanguageChange, t } from './i18n.ts';
+import { appUrl } from './core/paths.ts';
 
 const scenes = [
-  { image: '/assets/cinematics/desert.webp', name: 'SUNDOWN JUNCTION' },
-  { image: '/assets/cinematics/forest.webp', name: 'TIMBER RUN' },
-  { image: '/assets/cinematics/volcano.webp', name: 'ALOHA INFERNO' },
+  { image: appUrl('/assets/cinematics/desert.webp'), name: 'SUNDOWN JUNCTION' },
+  { image: appUrl('/assets/cinematics/forest.webp'), name: 'TIMBER RUN' },
+  { image: appUrl('/assets/cinematics/volcano.webp'), name: 'ALOHA INFERNO' },
 ] as const;
 
 export function mountCinematicBackground(root: HTMLElement) {
