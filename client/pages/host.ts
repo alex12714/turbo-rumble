@@ -16,7 +16,8 @@ import { resultsPodium } from '../results.ts';
 import { roomAdmin } from '../room-admin.ts';
 import { roomSettings } from '../room-settings.ts';
 import { MAPS, DEFAULT_SETTINGS } from '../../shared/maps.ts';
-import QRCode from 'qrcode';
+import { mountJoinQr } from '../join-qr.ts';
+import '../lobby-join.css';
 import { roomLinks } from '../core/room-links.ts';
 import { app, $, header, toast } from '../core/dom.ts';
 import { appUrl } from '../core/paths.ts';
@@ -84,7 +85,7 @@ export async function hostPage(code: string, watch = false) {
   document.body.className = embedded ? 'host-page embedded' : 'host-page';
   app.innerHTML = /* HTML */ `${header(`<div class="host-track"><span class="live-dot"></span> <span id="host-map-name">SUNDOWN CIRCUIT XL</span> <b id="host-map-index">01</b></div><div class="host-actions"><span id="host-admin"></span><a class="button subtle room-share" id="share-room" href="${appUrl(`/room/${code}`)}" target="_blank" rel="noopener">${watch ? 'Dołącz jako kontroler' : 'Udostępnij pokój'}</a><span id="host-connection" class="connection">Łączenie…</span><button class="icon-button" id="sound-toggle" aria-label="Włącz dźwięk">♪</button><button class="icon-button screen-awake-button" id="screen-awake" type="button"></button><button class="icon-button" id="fullscreen" aria-label="Pełny ekran">⛶</button></div>`)}
     <main class="arena">
-      <div class="game-viewport">
+      <div class="game-viewport" data-phase="lobby">
         <div id="game-world"></div>
         <div class="race-vignette"></div>
         <div id="race-hud" hidden>
@@ -98,54 +99,57 @@ export async function hostPage(code: string, watch = false) {
           </div>
         </div>
         <div id="host-center" class="host-center" hidden></div>
-        <section id="host-settings"></section>
-        <aside class="lobby-panel" id="lobby-panel">
-          <div class="join-panel-title">
-            <span class="card-kicker">WEŹ TELEFON I DOŁĄCZ</span><span class="small-dot"></span>
-          </div>
-          <div class="room-join">
-            <img id="join-qr" alt="Zeskanuj, aby dołączyć telefonem" />
-            <div>
-              <small>KOD POKOJU</small><strong>${code}</strong
-              ><a
-                id="join-link"
-                href="${appUrl(`/join?code=${code}&mode=controller`)}"
-                target="_blank"
-                rel="noopener"
-                >Otwórz pad ↗</a
-              >
+        <section class="join-hero" id="join-hero" aria-labelledby="join-hero-title">
+          <span class="card-kicker" id="join-hero-title">WEŹ TELEFON I DOŁĄCZ</span>
+          <div
+            class="join-hero-qr"
+            id="join-qr"
+            role="img"
+            aria-label="Zeskanuj, aby dołączyć telefonem"
+          ></div>
+          <div class="join-hero-code"><small>KOD POKOJU</small><strong>${code}</strong></div>
+          <p class="join-hero-meta">
+            <span id="network-instruction">Ładowanie adresu dla telefonów…</span
+            ><a
+              id="join-link"
+              href="${appUrl(`/join?code=${code}&mode=controller`)}"
+              target="_blank"
+              rel="noopener"
+              >Otwórz pad ↗</a
+            >
+          </p>
+        </section>
+        <div class="lobby-side">
+          <section id="host-settings"></section>
+          <aside class="lobby-panel" id="lobby-panel">
+            <div class="players-heading">
+              <b>NA LINII STARTU</b><span id="player-count">0 / 8</span>
+              <strong
+                id="lobby-ready-count"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              ></strong>
+              <div class="ready-progress" aria-hidden="true"><span></span></div>
             </div>
-          </div>
-          <p id="network-instruction" class="network-instruction">
-            Ładowanie adresu dla telefonów…
-          </p>
-          <div class="players-heading">
-            <b>NA LINII STARTU</b><span id="player-count">0 / 8</span>
-            <strong
-              id="lobby-ready-count"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            ></strong>
-            <div class="ready-progress" aria-hidden="true"><span></span></div>
-          </div>
-          <div id="lobby-players" class="lobby-players"></div>
-          <div class="lobby-tools" ${watch ? 'hidden' : ''}>
-            <button class="button subtle" id="add-keyboard">+ Klawiatura</button
-            ><button class="button subtle" id="add-bot">+ Bot</button>
-          </div>
-          <button
-            class="button primary start-button"
-            id="start-race"
-            ${watch ? 'hidden' : ''}
-            disabled
-          >
-            Start wyścigu <span>→</span>
-          </button>
-          <p class="lobby-footnote" id="start-help">
-            Pierwszy gracz jest adminem. Wszyscy gotowi? Start za 5 sekund.
-          </p>
-        </aside>
+            <div id="lobby-players" class="lobby-players"></div>
+            <div class="lobby-tools" ${watch ? 'hidden' : ''}>
+              <button class="button subtle" id="add-keyboard">+ Klawiatura</button
+              ><button class="button subtle" id="add-bot">+ Bot</button>
+            </div>
+            <button
+              class="button primary start-button"
+              id="start-race"
+              ${watch ? 'hidden' : ''}
+              disabled
+            >
+              Start wyścigu <span>→</span>
+            </button>
+            <p class="lobby-footnote" id="start-help">
+              Pierwszy gracz jest adminem. Wszyscy gotowi? Start za 5 sekund.
+            </p>
+          </aside>
+        </div>
         <div class="loading-badge" id="loading">PRZYGOTOWUJĘ TOR…</div>
         <dialog class="results-panel" id="results" aria-labelledby="results-title"></dialog>
       </div>
@@ -183,11 +187,7 @@ export async function hostPage(code: string, watch = false) {
   $('#network-instruction').textContent = t('Otwórz na telefonie · {address}', {
     address: base.replace(/^https?:\/\//, ''),
   });
-  $<HTMLImageElement>('#join-qr').src = await QRCode.toDataURL(url, {
-    width: 220,
-    margin: 1,
-    color: { dark: '#19293a', light: '#fffaf0' },
-  });
+  mountJoinQr($('#join-qr'), url);
   const reportStatus = embedStatusReporter(links.embedOrigins, url);
   const socket = connectGame(session);
   hostSocket = socket;
@@ -270,6 +270,7 @@ function renderHost(state: Snapshot | null) {
   const lobby = state.phase === 'lobby';
   const summaryPending = waitingForSummary(state);
   $('#lobby-panel').hidden = !lobby;
+  $('#join-hero').hidden = !lobby;
   $('#race-hud').hidden = !['racing', 'countdown'].includes(state.phase);
   const resultDialog = $<HTMLDialogElement>('#results');
   if ((state.phase !== 'finished' || summaryPending) && resultDialog.open) resultDialog.close();
