@@ -142,17 +142,49 @@
     max-width: none;
     margin: 0;
   }
+  /* Race setup at its full (compacted) height, never clipped; the starting grid takes the rest
+     and scrolls its player list if eight drivers do not fit. */
   .game-viewport[data-phase='lobby'] .lobby-side > .host-room-settings {
-    flex: 1 1 0;
-    min-height: 120px;
+    flex: none;
     max-height: none;
-    overflow: auto;
+    overflow: visible;
   }
   .game-viewport[data-phase='lobby'] .lobby-side > .lobby-panel {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-height: 0;
     max-height: none;
     overflow: auto;
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .race-setup {
+    padding: clamp(12px, 2cqh, 26px) clamp(14px, 2.2cqh, 28px);
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .setup-header .eyebrow {
+    margin-bottom: clamp(4px, 1cqh, 12px);
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .setup-header > p:last-child {
+    margin: 6px 0 clamp(8px, 1.6cqh, 20px);
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .setup-section-heading {
+    margin-bottom: clamp(6px, 1cqh, 12px);
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .map-image {
+    height: clamp(44px, 10cqh, 150px);
+    aspect-ratio: auto;
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .map-caption {
+    padding: clamp(6px, 1.1cqh, 13px) 10px;
+    gap: 2px;
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .rules-heading {
+    margin-top: clamp(10px, 1.8cqh, 25px);
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .setup-rule {
+    padding: clamp(6px, 1cqh, 13px) 14px;
+    gap: 4px;
+  }
+  .game-viewport[data-phase='lobby'] .host-room-settings .setup-footer {
+    margin-top: clamp(6px, 1.2cqh, 22px);
+    padding-top: clamp(6px, 1cqh, 16px);
   }
   .game-viewport[data-phase='lobby'] .lobby-players {
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
@@ -165,7 +197,21 @@
   }
 }
 
-/* Short frames (a call stage, a landscape phone): the side column scrolls as one, grid first. */
+/* Laptop-height screens: drop the decorative headline, subtitles and the footer hint. */
+@container (max-height: 900px) {
+  .game-viewport[data-phase='lobby'] .host-room-settings .setup-header h1,
+  .game-viewport[data-phase='lobby'] .host-room-settings .setup-header > p:last-child,
+  .game-viewport[data-phase='lobby'] .host-room-settings .map-caption > span,
+  .game-viewport[data-phase='lobby'] .host-room-settings #settings-hint {
+    display: none;
+  }
+  .game-viewport[data-phase='lobby'] .lobby-panel .lobby-footnote {
+    margin-top: 6px;
+  }
+}
+
+/* Short frames (a call stage, a landscape phone): the side column scrolls as one; the whole
+   race setup stays in view at the top, the starting grid follows. */
 @container (max-height: 560px) {
   .game-viewport[data-phase='lobby'] .lobby-side {
     overflow: auto;
@@ -177,7 +223,6 @@
     overflow: visible;
   }
   .game-viewport[data-phase='lobby'] .lobby-side > .lobby-panel {
-    order: -1;
     padding: 14px;
   }
 }
