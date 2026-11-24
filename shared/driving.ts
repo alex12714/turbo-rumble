@@ -43,6 +43,8 @@ interface DrivingInput {
   frozen: boolean;
   frozenSpeed?: number;
   hit: boolean;
+  /** Turn comes from the phone pad: softer wheel easing and a lower yaw rate. */
+  analog?: boolean;
 }
 
 /** Button input becomes progressive steering and tyre slip; never follows a human's racing line. */
@@ -84,8 +86,8 @@ export function drivingControl(
     : 0;
   const reversing = mayReverse && (state.reversing || reverseHold >= DRIVING.reverseHoldSeconds);
   const turn = brake ? 0 : input.turn;
-  const steering =
-    state.steering + (turn - state.steering) * (1 - Math.exp(-DRIVING.steeringResponse * dt));
+  const response = input.analog ? PAD_STEERING.steeringResponse : DRIVING.steeringResponse;
+  const steering = state.steering + (turn - state.steering) * (1 - Math.exp(-response * dt));
   const powerSlide =
     state.grounded &&
     !hit &&
@@ -119,6 +121,10 @@ export function drivingControl(
           ? DRIVING.nitroAcceleration
           : DRIVING.acceleration * (1 + CATCH_UP.maxAccelerationBonus * assistance),
     ),
-    yawRate: steering * DRIVING.turnRate * clamp(Math.abs(speedForward) / 7, 0.25, 1),
+    yawRate:
+      steering *
+      DRIVING.turnRate *
+      (input.analog ? PAD_STEERING.yawScale : 1) *
+      clamp(Math.abs(speedForward) / 7, 0.25, 1),
   };
 }

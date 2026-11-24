@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Quaternion, Vector3 } from 'three';
 import { Race, initPhysics } from '../shared/simulation.ts';
 import { isInput } from '../shared/protocol.ts';
-import { PAD_STEERING, padSteer } from '../shared/steering.ts';
+import { PAD_STEERING, padSteer, padTravel } from '../shared/steering.ts';
 import { drivingControl } from '../shared/driving.ts';
 import { trackAt } from '../shared/track.ts';
 
@@ -18,8 +18,11 @@ test('the pad maps the whole slide to steering, with a dead zone and a soft cent
   assert.equal(padSteer(-7, travel), 0);
   const small = padSteer(15, travel);
   assert.ok(small > 0 && small < 0.1, `a 15% slide is a small correction, got ${small}`);
+  const quarter = padSteer(25, travel);
+  assert.ok(quarter > 0.03 && quarter < 0.07, `a quarter slide is ~5% steer, got ${quarter}`);
   const half = padSteer(50, travel);
-  assert.ok(half > 0.25 && half < 0.45, `half the slide is well short of full lock, got ${half}`);
+  assert.ok(half > 0.2 && half < 0.3, `half the slide is about a quarter lock, got ${half}`);
+  assert.ok(padSteer(10, travel) === 0, 'the 12% dead zone holds a resting thumb');
   assert.equal(padSteer(100, travel), 1);
   assert.equal(padSteer(-100, travel), -1);
   assert.equal(padSteer(400, travel), 1, 'past the end stays clamped');
@@ -31,6 +34,12 @@ test('the pad maps the whole slide to steering, with a dead zone and a soft cent
   }
   assert.equal(padSteer(Number.NaN, travel), 0);
   assert.equal(padSteer(40, 0), 0);
+});
+
+test('the slide spans 60% of the pad width each way, 90-220px', () => {
+  assert.equal(padTravel(100), 90);
+  assert.equal(padTravel(200), 120);
+  assert.equal(padTravel(1000), 220);
 });
 
 test('inputs accept analog steer in -1..1 only, and keys may omit it', () => {
@@ -112,7 +121,10 @@ test('the simulation honours analog steer instead of treating it as full lock', 
   const small = turnWith(-0.2, true, false);
   const right = turnWith(0.5, false, true);
   assert.ok(full > 0.2, `full left turns left, got ${full}`);
-  assert.ok(Math.abs(full - keyLeft) < 0.05, 'full pad lock matches the key');
+  assert.ok(
+    full < keyLeft * 0.85 && full > keyLeft * 0.5,
+    `full pad lock turns calmer than the key, got ${full} vs ${keyLeft}`,
+  );
   assert.ok(small > 0 && small < full * 0.4, `a 0.2 steer turns a little, got ${small} vs ${full}`);
   assert.ok(right < 0, 'positive steer turns right');
 });

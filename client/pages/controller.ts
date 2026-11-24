@@ -16,7 +16,7 @@ import { app, $, logo, toast } from '../core/dom.ts';
 import { appUrl } from '../core/paths.ts';
 import { storeItem } from '../core/api.ts';
 import { connectGame, createInput } from '../core/network.ts';
-import { padSteer } from '../../shared/steering.ts';
+import { padSteer, padTravel } from '../../shared/steering.ts';
 import { type Session, type Snapshot } from '../../shared/types.ts';
 export function controller(session: Session) {
   document.body.className = 'controller-page';
@@ -98,7 +98,7 @@ export function controller(session: Session) {
     dead = false,
     finished = false;
   // Right thumb: a floating slider. Where the finger lands becomes the centre; the whole slide
-  // (about 40% of the pad width each way) maps proportionally to -1..1 with a small dead zone
+  // (60% of the pad width each way, 90-220px) maps proportionally to -1..1 with a small dead zone
   // and a soft curve (shared/steering.ts), so small slides give small corrections and only the
   // end of the travel is full lock. Pulling down past BRAKE_PX brakes / reverses.
   const BRAKE_PX = 46;
@@ -148,7 +148,11 @@ export function controller(session: Session) {
       id: e.pointerId,
       x: e.clientX,
       y: e.clientY,
-      travel: Math.min(160, Math.max(60, zone.clientWidth * 0.4)),
+      // Never more than the room to the nearer screen edge, so full lock stays reachable.
+      travel: Math.max(
+        60,
+        Math.min(padTravel(zone.clientWidth), e.clientX - 8, innerWidth - 8 - e.clientX),
+      ),
     };
     steerValue = 0;
     braking = false;

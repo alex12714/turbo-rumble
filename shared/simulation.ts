@@ -716,6 +716,7 @@ export class Race {
           frozen,
           frozenSpeed: c.frostSpeed ?? undefined,
           hit,
+          analog: !c.bot && steer !== undefined,
         },
         DT,
         c.catchUp,
