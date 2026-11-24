@@ -2884,3 +2884,144 @@ dialog h2 {
 .room-main .room-code {
   margin-bottom: 20px;
 }
+
+/* Phone pad: left thumb fires the item, right thumb slides to steer. */
+.pad-controls {
+  flex-direction: row;
+  align-items: stretch;
+}
+.fire-controls {
+  justify-content: center;
+  order: 1;
+}
+.direction-controls {
+  display: flex;
+  flex-direction: column;
+  order: 2;
+  max-width: 620px;
+}
+.fire-key {
+  width: clamp(150px, 30vw, 280px);
+  height: auto;
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+.steer-zone {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  flex: 1;
+  min-height: clamp(150px, 30vw, 300px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  background: #223347;
+  border: 2px solid #34485b;
+  border-radius: 26px;
+  box-shadow:
+    0 8px 0 #09131e,
+    inset 0 2px 0 #ffffff0a;
+  color: #eaf0e5;
+}
+.steer-arrow {
+  font-size: clamp(54px, 10vw, 110px);
+  line-height: 1;
+  color: #5d7183;
+  transition: color 80ms;
+}
+.steer-zone.steer-left .steer-arrow-left,
+.steer-zone.steer-right .steer-arrow-right {
+  color: var(--player);
+}
+.steer-track {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  border-radius: 7px;
+  background: #142233;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.steer-knob {
+  width: clamp(64px, 11vw, 96px);
+  height: clamp(64px, 11vw, 96px);
+  border-radius: 50%;
+  background: #3a5168;
+  border: 3px solid #4f677d;
+  box-shadow: 0 6px 0 #09131e;
+  flex-shrink: 0;
+  transition: background 80ms;
+}
+.steer-zone.pressed .steer-knob {
+  background: var(--player);
+  border-color: #ffffff55;
+}
+.steer-zone.steer-brake .steer-knob {
+  background: #e2574c;
+}
+.steer-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #9faeb3;
+  pointer-events: none;
+}
+.brake-tip {
+  position: static;
+  margin-top: 14px;
+}
+.pad-shell[data-frozen='true'] .steer-zone {
+  background: #b9ecf9;
+  border-color: #edfaff;
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .pad-controls {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .fire-controls {
+    flex-direction: column;
+    width: 42%;
+    gap: 12px;
+  }
+  .fire-key {
+    width: min(38vw, 160px);
+    height: auto;
+  }
+  .fire-controls > span {
+    text-align: center;
+  }
+  .direction-controls {
+    flex: 1;
+    width: auto;
+  }
+  .steer-zone {
+    padding: 0 6px;
+    min-height: 240px;
+  }
+  .steer-arrow {
+    font-size: 44px;
+  }
+  .steer-knob {
+    width: 58px;
+    height: 58px;
+  }
+}
+@media (orientation: landscape) and (max-height: 550px) {
+  .steer-zone {
+    min-height: clamp(110px, 42vh, 190px);
+  }
+  .fire-key {
+    width: clamp(110px, 38vh, 180px);
+    height: auto;
+  }
+}

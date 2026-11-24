@@ -245,6 +245,10 @@ export const EN = {
   LEWO: 'LEFT',
   PRAWO: 'RIGHT',
   'DŁUGI SKRĘT = DRIFT · OBA = HAMULEC / COFANIE': 'HOLD A TURN = DRIFT · BOTH = BRAKE / REVERSE',
+  'DŁUGI SKRĘT = DRIFT · W DÓŁ = HAMULEC / COFANIE':
+    'HOLD A TURN = DRIFT · PULL DOWN = BRAKE / REVERSE',
+  'Kierownica: przesuń palec w lewo lub w prawo': 'Steering: slide your finger left or right',
+  'PRZESUŃ, ABY SKRĘCAĆ': 'SLIDE TO STEER',
   'Użyj przedmiotu': 'Use item',
   PRZEDMIOT: 'ITEM',
   'Zbieraj złote kryształy na torze': 'Collect golden crystals on the track',

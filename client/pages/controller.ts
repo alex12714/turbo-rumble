@@ -52,17 +52,28 @@ export function controller(session: Session) {
     <section id="pad-admin"></section>
     <section id="pad-settings"></section>
     <main class="pad-controls" id="pad-controls">
-      <section class="direction-controls">
-        <button class="pad-key left-key" id="left-control" aria-label="Skręć w lewo">
-          <span>←</span><small>LEWO</small></button
-        ><button class="pad-key right-key" id="right-control" aria-label="Skręć w prawo">
-          <span>→</span><small>PRAWO</small></button
-        ><span class="brake-tip">DŁUGI SKRĘT = DRIFT · OBA = HAMULEC / COFANIE</span>
-      </section>
       <section class="fire-controls">
         <button id="fire-control" class="fire-key" aria-label="Użyj przedmiotu">
           <span id="weapon-icon">ϟ</span><b id="weapon-name">PRZEDMIOT</b></button
         ><span id="weapon-help">Zbieraj złote kryształy na torze</span>
+      </section>
+      <section class="direction-controls">
+        <div
+          class="steer-zone"
+          id="steer-zone"
+          role="slider"
+          aria-label="Kierownica: przesuń palec w lewo lub w prawo"
+          aria-valuemin="-1"
+          aria-valuemax="1"
+          aria-valuenow="0"
+        >
+          <span class="steer-arrow steer-arrow-left" aria-hidden="true">‹</span
+          ><span class="steer-track" aria-hidden="true"
+            ><span class="steer-knob" id="steer-knob"></span></span
+          ><span class="steer-arrow steer-arrow-right" aria-hidden="true">›</span>
+          <small class="steer-label">PRZESUŃ, ABY SKRĘCAĆ</small>
+        </div>
+        <span class="brake-tip">DŁUGI SKRĘT = DRIFT · W DÓŁ = HAMULEC / COFANIE</span>
       </section>
     </main>
     <footer class="pad-footer">
@@ -85,34 +96,57 @@ export function controller(session: Session) {
     latest: Snapshot | null = null,
     dead = false,
     finished = false;
-  const pointers = new Map<number, 'left' | 'right'>();
-  const sync = () => {
-    const l = [...pointers.values()].includes('left'),
-      r = [...pointers.values()].includes('right');
-    input.set(l, r);
-    $('#left-control').classList.toggle('pressed', l);
-    $('#right-control').classList.toggle('pressed', r);
+  // Right thumb: a floating slider. Where the finger lands becomes the centre; sliding past the
+  // dead zone steers, pulling down past BRAKE_PX brakes / reverses (both keys, as before).
+  const DEAD_PX = 14,
+    MAX_PX = 70,
+    BRAKE_PX = 46;
+  const zone = $('#steer-zone'),
+    knob = $('#steer-knob');
+  let stick: { id: number; x: number; y: number } | null = null,
+    steerL = false,
+    steerR = false;
+  const sync = (dx = 0, dy = 0) => {
+    input.set(steerL, steerR);
+    knob.style.transform = `translate(${dx}px, ${Math.max(0, dy)}px)`;
+    zone.classList.toggle('steer-left', steerL && !steerR);
+    zone.classList.toggle('steer-right', steerR && !steerL);
+    zone.classList.toggle('steer-brake', steerL && steerR);
+    zone.classList.toggle('pressed', !!stick);
+    zone.setAttribute('aria-valuenow', String(steerL === steerR ? 0 : steerL ? -1 : 1));
   };
-  for (const [id, direction] of [
-    ['left-control', 'left'],
-    ['right-control', 'right'],
-  ] as const) {
-    const el = $('#' + id);
-    el.onpointerdown = (e) => {
-      e.preventDefault();
-      if (latest?.phase !== 'racing' || dead || finished) return;
-      el.setPointerCapture(e.pointerId);
-      pointers.set(e.pointerId, direction);
-      sync();
-    };
-    const release = (e: PointerEvent) => {
-      pointers.delete(e.pointerId);
-      sync();
-    };
-    el.onpointerup = release;
-    el.onpointercancel = release;
-    el.onlostpointercapture = release;
-  }
+  const steer = (e: PointerEvent) => {
+    if (!stick || e.pointerId !== stick.id) return;
+    let dx = e.clientX - stick.x;
+    const dy = e.clientY - stick.y;
+    // Drag the centre along when the finger runs past the edge, so sliding back steers at once.
+    if (Math.abs(dx) > MAX_PX) {
+      stick.x += dx - Math.sign(dx) * MAX_PX;
+      dx = Math.sign(dx) * MAX_PX;
+    }
+    const brake = dy > BRAKE_PX;
+    steerL = brake || dx < -DEAD_PX;
+    steerR = brake || dx > DEAD_PX;
+    sync(dx, Math.min(dy, MAX_PX));
+  };
+  zone.onpointerdown = (e) => {
+    e.preventDefault();
+    if (latest?.phase !== 'racing' || dead || finished) return;
+    // A new touch always takes over, so a lost pointerup can never leave the wheel stuck.
+    zone.setPointerCapture(e.pointerId);
+    stick = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    sync();
+  };
+  zone.onpointermove = steer;
+  const release = (e: PointerEvent) => {
+    if (!stick || e.pointerId !== stick.id) return;
+    stick = null;
+    steerL = steerR = false;
+    sync();
+  };
+  zone.onpointerup = release;
+  zone.onpointercancel = release;
+  zone.onlostpointercapture = release;
   $('#fire-control').onpointerdown = (e) => {
     e.preventDefault();
     if (latest?.phase === 'racing' && !dead && !finished) {
@@ -125,7 +159,8 @@ export function controller(session: Session) {
       $('#fire-control').classList.remove('pressed'),
     );
   const reset = () => {
-    pointers.clear();
+    stick = null;
+    steerL = steerR = false;
     input.reset();
     sync();
     $('#fire-control').classList.remove('pressed');
@@ -195,8 +230,7 @@ export function controller(session: Session) {
     $('.pad-shell').dataset.lobby = String(inLobby);
     $('.pad-shell').dataset.phase = state.phase;
     $('.pad-shell').dataset.frozen = String(car.alive && car.frozen);
-    for (const id of ['#left-control', '#right-control'])
-      $(id).setAttribute('aria-disabled', String(car.alive && car.frozen));
+    zone.setAttribute('aria-disabled', String(car.alive && car.frozen));
     finished = !!car.finishPlace;
     $('#pad-controls').hidden = inLobby || finished;
     const mayReady = inLobby || state.phase === 'countdown';
