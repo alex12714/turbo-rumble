@@ -16,6 +16,7 @@ import { app, $, logo, toast } from '../core/dom.ts';
 import { appUrl } from '../core/paths.ts';
 import { storeItem } from '../core/api.ts';
 import { connectGame, createInput } from '../core/network.ts';
+import { padSteer } from '../../shared/steering.ts';
 import { type Session, type Snapshot } from '../../shared/types.ts';
 export function controller(session: Session) {
   document.body.className = 'controller-page';
@@ -96,52 +97,69 @@ export function controller(session: Session) {
     latest: Snapshot | null = null,
     dead = false,
     finished = false;
-  // Right thumb: a floating slider. Where the finger lands becomes the centre; sliding past the
-  // dead zone steers, pulling down past BRAKE_PX brakes / reverses (both keys, as before).
-  const DEAD_PX = 14,
-    MAX_PX = 70,
-    BRAKE_PX = 46;
+  // Right thumb: a floating slider. Where the finger lands becomes the centre; the whole slide
+  // (about 40% of the pad width each way) maps proportionally to -1..1 with a small dead zone
+  // and a soft curve (shared/steering.ts), so small slides give small corrections and only the
+  // end of the travel is full lock. Pulling down past BRAKE_PX brakes / reverses.
+  const BRAKE_PX = 46;
   const zone = $('#steer-zone'),
+    track = $('.steer-track'),
     knob = $('#steer-knob');
-  let stick: { id: number; x: number; y: number } | null = null,
-    steerL = false,
-    steerR = false;
+  let stick: { id: number; x: number; y: number; travel: number } | null = null,
+    steerValue = 0,
+    braking = false;
   const sync = (dx = 0, dy = 0) => {
-    input.set(steerL, steerR);
-    knob.style.transform = `translate(${dx}px, ${Math.max(0, dy)}px)`;
-    zone.classList.toggle('steer-left', steerL && !steerR);
-    zone.classList.toggle('steer-right', steerR && !steerL);
-    zone.classList.toggle('steer-brake', steerL && steerR);
-    zone.classList.toggle('pressed', !!stick);
-    zone.setAttribute('aria-valuenow', String(steerL === steerR ? 0 : steerL ? -1 : 1));
+    const active = !!stick;
+    input.set(
+      active && (braking || steerValue < 0),
+      active && (braking || steerValue > 0),
+      active && !braking ? steerValue : undefined,
+    );
+    // The knob mirrors the finger along the track (it is narrower than the slide travel).
+    const visual = Math.max(24, (track.clientWidth - knob.offsetWidth) / 2 + 24);
+    const kx = stick ? (dx / stick.travel) * visual : 0;
+    knob.style.transform = `translate(${kx.toFixed(1)}px, ${Math.max(0, dy)}px)`;
+    zone.classList.toggle('steer-left', active && !braking && steerValue < 0);
+    zone.classList.toggle('steer-right', active && !braking && steerValue > 0);
+    zone.classList.toggle('steer-brake', active && braking);
+    zone.classList.toggle('pressed', active);
+    zone.setAttribute('aria-valuenow', (active && !braking ? steerValue : 0).toFixed(2));
+    zone.dataset.steer = (active && !braking ? steerValue : 0).toFixed(3);
   };
   const steer = (e: PointerEvent) => {
     if (!stick || e.pointerId !== stick.id) return;
     let dx = e.clientX - stick.x;
     const dy = e.clientY - stick.y;
-    // Drag the centre along when the finger runs past the edge, so sliding back steers at once.
-    if (Math.abs(dx) > MAX_PX) {
-      stick.x += dx - Math.sign(dx) * MAX_PX;
-      dx = Math.sign(dx) * MAX_PX;
+    // Drag the centre along when the finger runs past the end, so sliding back steers at once.
+    if (Math.abs(dx) > stick.travel) {
+      stick.x += dx - Math.sign(dx) * stick.travel;
+      dx = Math.sign(dx) * stick.travel;
     }
-    const brake = dy > BRAKE_PX;
-    steerL = brake || dx < -DEAD_PX;
-    steerR = brake || dx > DEAD_PX;
-    sync(dx, Math.min(dy, MAX_PX));
+    braking = dy > BRAKE_PX;
+    steerValue = padSteer(dx, stick.travel);
+    sync(dx, Math.min(dy, 70));
   };
   zone.onpointerdown = (e) => {
     e.preventDefault();
     if (latest?.phase !== 'racing' || dead || finished) return;
     // A new touch always takes over, so a lost pointerup can never leave the wheel stuck.
     zone.setPointerCapture(e.pointerId);
-    stick = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    stick = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      travel: Math.min(160, Math.max(60, zone.clientWidth * 0.4)),
+    };
+    steerValue = 0;
+    braking = false;
     sync();
   };
   zone.onpointermove = steer;
   const release = (e: PointerEvent) => {
     if (!stick || e.pointerId !== stick.id) return;
     stick = null;
-    steerL = steerR = false;
+    steerValue = 0;
+    braking = false;
     sync();
   };
   zone.onpointerup = release;
@@ -160,7 +178,8 @@ export function controller(session: Session) {
     );
   const reset = () => {
     stick = null;
-    steerL = steerR = false;
+    steerValue = 0;
+    braking = false;
     input.reset();
     sync();
     $('#fire-control').classList.remove('pressed');

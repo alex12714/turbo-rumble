@@ -9,16 +9,24 @@ export function createInput(socket: GameSocket) {
   let seq = 0,
     actionSeq = 0,
     left = false,
-    right = false;
+    right = false,
+    steer: number | undefined;
   const send = () => {
     if (socket.connected)
-      socket.emit('input', { seq: ++seq, left, right, actionSeq } satisfies Input);
+      socket.emit('input', {
+        seq: ++seq,
+        left,
+        right,
+        ...(steer === undefined ? {} : { steer }),
+        actionSeq,
+      } satisfies Input);
   };
   const onConnect = () => {
     seq = 0;
     actionSeq = 0;
     left = false;
     right = false;
+    steer = undefined;
     send();
   };
   socket.on('connect', onConnect);
@@ -26,6 +34,7 @@ export function createInput(socket: GameSocket) {
   const reset = () => {
     left = false;
     right = false;
+    steer = undefined;
     send();
   };
   window.addEventListener('blur', reset);
@@ -34,9 +43,11 @@ export function createInput(socket: GameSocket) {
   };
   document.addEventListener('visibilitychange', visibility);
   return {
-    set(l: boolean, r: boolean) {
+    /** Buttons; `analog` (-1 left .. 1 right) is the pad's proportional steer, if any. */
+    set(l: boolean, r: boolean, analog?: number) {
       left = l;
       right = r;
+      steer = analog;
       send();
     },
     fire() {

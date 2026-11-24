@@ -1,4 +1,5 @@
 import { CATCH_UP } from './catch-up.ts';
+import { PAD_STEERING } from './steering.ts';
 
 export const DRIVING = {
   speed: 22,
@@ -90,7 +91,7 @@ export function drivingControl(
     !hit &&
     !frozen &&
     !brake &&
-    turn !== 0 &&
+    Math.abs(turn) >= PAD_STEERING.driftThreshold &&
     turn * state.steering >= 0 &&
     Math.abs(speedForward) > DRIVING.driftSpeed;
   let drift =

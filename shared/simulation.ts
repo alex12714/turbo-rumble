@@ -661,6 +661,7 @@ export class Race {
         a = this.track.trackAt(c.progress);
       let left = false,
         right = false,
+        steer: number | undefined,
         fire = false;
       if (c.bot) {
         fire =
@@ -672,6 +673,7 @@ export class Race {
       } else if (this.tick - c.lastInputTick <= STALE_INPUT_TICKS && c.connected) {
         left = c.input.left;
         right = c.input.right;
+        steer = c.input.steer;
         fire = c.input.actionSeq > c.usedAction;
       }
       c.usedAction = c.input.actionSeq;
@@ -685,7 +687,8 @@ export class Race {
         yaw = bodyYaw(c.body);
       const forward = new Vector3(Math.sin(yaw), 0, Math.cos(yaw));
       const speedForward = vel.x * forward.x + vel.z * forward.z;
-      let turn = Number(left) - Number(right);
+      // Phones send analog steer (-1 left .. 1 right); keys and old clients send buttons.
+      let turn = steer !== undefined ? -steer : Number(left) - Number(right);
       if (c.bot) {
         const target = this.track.trackAt(c.progress + Math.max(6, Math.abs(speedForward) * 0.4));
         const destination = target.p

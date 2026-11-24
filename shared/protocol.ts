@@ -1,5 +1,6 @@
 import { MAPS, type RaceSettings } from './maps.ts';
 import type { Input, ConnectionSession, Snapshot } from './types.ts';
+import { isSteer } from './steering.ts';
 
 export type HostCommand =
   | { action: 'start' | 'lobby' | 'bot' }
@@ -69,7 +70,8 @@ export function isInput(value: unknown): value is Input {
     value.actionSeq >= 0 &&
     value.actionSeq <= 1e9 &&
     typeof value.left === 'boolean' &&
-    typeof value.right === 'boolean'
+    typeof value.right === 'boolean' &&
+    (value.steer === undefined || isSteer(value.steer))
   );
 }
 export function parseSession(value: unknown): ConnectionSession | null {

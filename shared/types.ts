@@ -16,6 +16,8 @@ export interface Input {
   seq: number;
   left: boolean;
   right: boolean;
+  /** Analog steering from the phone pad, -1 full left .. 1 full right; keys omit it. */
+  steer?: number;
   actionSeq: number;
 }
 export interface CarState {
