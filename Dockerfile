@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:24.22.1-bookworm-slim AS build
+FROM node:24.22.3-bookworm-slim AS build
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
@@ -12,7 +12,7 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run check && BASE_PATH="$BASE_PATH" npm run build
 
-FROM node:24.22.1-bookworm-slim AS runtime
+FROM node:24.22.3-bookworm-slim AS runtime
 ARG BASE_PATH=""
 ENV NODE_ENV=production \
     BASE_PATH=$BASE_PATH \
